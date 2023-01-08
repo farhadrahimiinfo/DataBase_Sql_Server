@@ -1,0 +1,70 @@
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+create Function [dbo].[Gregorian_To_Persian] (@Gdate datetime,@Format NVARCHAR(20)=NULL)
+Returns nvarchar(50)
+as
+Begin
+declare @date datetime=cast(@gdate as date)
+    Declare @depoch as bigint
+    Declare @cycle  as bigint
+    Declare @cyear  as bigint
+    Declare @ycycle as bigint
+    Declare @aux1 as bigint
+    Declare @aux2 as bigint
+    Declare @yday as bigint
+    Declare @Jofst  as Numeric(18,2)
+    Declare @jdn bigint
+      
+    Declare @iYear   As Integer
+    Declare @iMonth  As Integer
+    Declare @iDay    As Integer
+ 
+    Set @Jofst=2415020.50
+    Set @jdn=Round(Cast(@date as int)+ @Jofst,0)
+ 
+    Set @depoch = @jdn - [dbo].[fn_Persian_To_Julian](475, 1, 1)
+    Set @cycle = Cast(@depoch / 1029983 as int)
+    Set @cyear = @depoch%1029983
+      
+    If @cyear = 1029982
+       Begin
+         Set @ycycle = 2820
+       End
+    Else
+       Begin
+        Set @aux1 = Cast(@cyear / 366 as int)
+        Set @aux2 = @cyear%366
+        Set @ycycle = Cast(((2134 * @aux1) + (2816 * @aux2) + 2815) / 1028522 as int) + @aux1 + 1
+      End
+      
+    Set @iYear = @ycycle + (2820 * @cycle) + 474
+ 
+    If @iYear <= 0
+      Begin 
+        Set @iYear = @iYear - 1
+      End
+    Set @yday = (@jdn - [dbo].[fn_Persian_To_Julian](@iYear, 1, 1)) + 1
+    If @yday <= 186
+       Begin
+         Set @iMonth = CEILING(Convert(Numeric(18,4),@yday) / 31)
+       End
+    Else
+       Begin
+          Set @iMonth = CEILING((Convert(Numeric(18,4),@yday) - 6) / 30) 
+       End
+       Set @iDay = (@jdn - [dbo].[fn_Persian_To_Julian](@iYear, @iMonth, 1)) + 1
+  
+DECLARE @RET NVARCHAR(25)
+SET @RET=@Format
+SET @RET=REPLACE(@RET , 'Y',@iYear);
+SET @RET=REPLACE(@RET  COLLATE Latin1_General_CS_AS, 'm', RIGHT('00'+CONVERT(NVARCHAR(8),@iMonth) , 2));
+SET @RET=REPLACE(@RET , 'd',RIGHT('00'+CONVERT(NVARCHAR(8),@iDay) , 2));
+SET @RET=REPLACE(@RET , 'H', RIGHT('00'+Convert(nvarchar(8),DATEPART(hour,@Gdate) ), 2));
+SET @RET=REPLACE(@RET COLLATE Latin1_General_CS_AS , 'M', RIGHT('00'+Convert(nvarchar(8),DATEPART(minute,@Gdate) ), 2));
+SET @RET=REPLACE(@RET , 's', RIGHT('00'+Convert(nvarchar(8),DATEPART(second,@Gdate) ), 2));
+  Return @RET
+  -- Return Convert(nvarchar(50),@iYear)+ '-' +   RIGHT('00'+Convert(nvarchar(50),@iMonth) , 2) +'-' + RIGHT('00'+Convert(nvarchar(50),@iDay) , 2) 
+End

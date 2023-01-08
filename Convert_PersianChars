@@ -1,0 +1,9 @@
+create FUNCTION [Convert_PersianChars]
+    (
+      @Str NVARCHAR(MAX) = NULL
+    )
+RETURNS NVARCHAR(MAX)
+AS
+    BEGIN
+        RETURN REPLACE(REPLACE(@Str, N'ي', N'ی'), N'ك', N'ک')
+    END
